@@ -115,14 +115,13 @@ export async function fetchSheetData(): Promise<DashboardData> {
 
   // Parse Pengadaan (target: row 12, realisasi: row 13)
   // Read names from header row (row 0) for cols 1-3, and label row (row 11) for col 4
-  const headerRow = rows[0] || [];
   const pengadaanLabelRow = rows[11] || [];
   const pengadaanTargetRow = rows[12] || [];
   const pengadaanRealRow = rows[13] || [];
   const pengadaan = [
-    { name: headerRow[1]?.trim() || "Beras Medium", target: parseNumber(pengadaanTargetRow[1]), realization: parseNumber(pengadaanRealRow[1]) },
-    { name: headerRow[2]?.trim() || "Beras Premium", target: parseNumber(pengadaanTargetRow[2]), realization: parseNumber(pengadaanRealRow[2]) },
-    { name: headerRow[3]?.trim() || "Minyak Kita", target: parseNumber(pengadaanTargetRow[3]), realization: parseNumber(pengadaanRealRow[3]) },
+    { name: pengadaanLabelRow[1]?.trim() || "Beras Medium", target: parseNumber(pengadaanTargetRow[1]), realization: parseNumber(pengadaanRealRow[1]) },
+    { name: pengadaanLabelRow[2]?.trim() || "GKP", target: parseNumber(pengadaanTargetRow[2]), realization: parseNumber(pengadaanRealRow[2]) },
+    { name: pengadaanLabelRow[3]?.trim() || "Setara Beras", target: parseNumber(pengadaanTargetRow[3]), realization: parseNumber(pengadaanRealRow[3]) },
     { name: pengadaanLabelRow[4]?.trim() || "Jagung", target: parseNumber(pengadaanTargetRow[4]), realization: parseNumber(pengadaanRealRow[4]) },
   ];
 

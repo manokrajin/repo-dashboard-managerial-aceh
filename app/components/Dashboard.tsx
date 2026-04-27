@@ -179,9 +179,9 @@ export default function Dashboard({ initialData }: DashboardProps) {
 
               {/* Right Column */}
               <div className="dashboard-column">
-                <StockSection stock={data.stock} stockDate={data.stockDate} />
-                
                 <IHSGSection ihsg={data.ihsg} />
+                
+                <StockSection stock={data.stock} stockDate={data.stockDate} />
               </div>
             </div>
 
