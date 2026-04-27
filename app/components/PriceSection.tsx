@@ -38,7 +38,7 @@ export default function PriceSection({
         <div style={{ flex: 1, padding: "14px", background: "#f8fafc", borderRadius: "8px" }}>
           <div style={{ fontSize: "12px", fontWeight: 600, color: "#475569", marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
             <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#f59e0b" }} />
-            Minyak Kita
+            Minyakita
           </div>
           <div style={{ fontSize: "20px", fontWeight: 800, color: "#0f172a" }}>
             Rp{latestMinyakGoreng.toLocaleString("id-ID")}<span style={{ fontSize: "12px", fontWeight: 600, color: "#94a3b8" }}>/L</span>

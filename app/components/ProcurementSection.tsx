@@ -10,7 +10,7 @@ export default function ProcurementSection({ pengadaan }: ProcurementSectionProp
   return (
     <div style={{ padding: "20px", background: "white", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
       <h2 style={{ fontSize: "20px", fontWeight: 800, textTransform: "uppercase", marginBottom: "20px", color: "#1e293b" }}>
-        PENGADAAN 2026
+        Pengadaan PSO 2026
       </h2>
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         {pengadaan.map((item, index) => {

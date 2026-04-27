@@ -73,7 +73,7 @@ export default function PriceChart({ priceHistory }: PriceChartProps) {
         fill: true,
       },
       {
-        label: "Minyak Kita",
+        label: "Minyakita",
         data: priceHistory.map((p) => p.minyakGoreng),
         borderColor: "#f59e0b",
         backgroundColor: "rgba(245, 158, 11, 0.08)",
