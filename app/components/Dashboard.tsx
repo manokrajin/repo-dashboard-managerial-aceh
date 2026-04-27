@@ -185,10 +185,11 @@ export default function Dashboard({ initialData }: DashboardProps) {
               </div>
             </div>
 
-            {/* SPHP & BANPANG side by side */}
+            {/* SPHP, BANPANG, MINYAKITA side by side */}
             <div className="distribution-row">
               <DistributionSection title="SPHP" data={data.sphp} colorTheme="amber" icon="📦" />
               <DistributionSection title="BANPANG" data={data.banpang} colorTheme="purple" icon="🏷️" />
+              <DistributionSection title="MINYAKITA" data={data.distMinyakita} colorTheme="blue" icon="🫗" />
             </div>
           </div>
 

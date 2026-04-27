@@ -966,7 +966,7 @@ body {
 
 .distribution-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 24px;
   align-items: start;
 }

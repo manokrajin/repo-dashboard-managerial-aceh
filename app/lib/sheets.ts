@@ -40,7 +40,7 @@ const STOCK_CONFIG: Array<{
   { name: "Setara Beras", colIndex: 3, unit: "Ton", icon: "⚖️" },
   { name: "Jagung Pakan Ternak", colIndex: 4, unit: "Ton", icon: "🌽" },
   { name: "Gula Pasir", colIndex: 5, unit: "Ton", icon: "🧂" },
-  { name: "Minyak Goreng", colIndex: 6, unit: "L", icon: "🫗" },
+  { name: "Minyak Goreng", colIndex: 6, unit: "Ltr", icon: "🫗" },
   { name: "Beras SPHP @5Kg", colIndex: 7, unit: "Ton", icon: "📦" },
   { name: "Beras BANPANG @10Kg", colIndex: 8, unit: "Ton", icon: "📦" },
   { name: "Kemasan SPHP", colIndex: 9, unit: "Lbr", icon: "🏷️" },
@@ -48,7 +48,7 @@ const STOCK_CONFIG: Array<{
   {
     name: "Space Gudang Tersedia (real)",
     colIndex: -1,
-    unit: "T",
+    unit: "Ton",
     icon: "🏭",
   },
 ];
@@ -162,21 +162,50 @@ export async function fetchSheetData(): Promise<DashboardData> {
   }
   const banpang = Array.from(banpangMap.values());
 
+  // Parse Minyakita Distribution (col I=region, J=target, K=realization — 0-indexed: col8, col9, col10)
+  const minyakitaDistMap = new Map<string, { region: string; target: number; realization: number }>();
+  for (let i = 14; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row) break;
+    const label = (row[8] || "").trim().toLowerCase();
+    // Stop when we hit non-distribution rows
+    if (label === "" || label.startsWith("beras") || label.startsWith("per tanggal") || label.startsWith("aceh")) break;
+    if (row[8] && row[8].trim() !== "") {
+      minyakitaDistMap.set(label, {
+        region: row[8].trim(),
+        target: parseNumber(row[9]),
+        realization: parseNumber(row[10]),
+      });
+    }
+  }
+  const distMinyakita = Array.from(minyakitaDistMap.values());
+
   // Parse IHSG data — dynamically find "beras medium" row
-  const ihsg: IHSGData = { entries: [], date: "", hetMedium: 0, hetPremium: 0 };
+  const ihsg: IHSGData = { entries: [], date: "", hetMedium: 0, hetPremium: 0, hetSphp: 0, hetMinyakita: 0 };
   
   let mediumRowIdx = -1;
+  let sphpRowIdx = -1;
+  let minyakitaRowIdx = -1;
   for (let i = 14; i < rows.length; i++) {
     if (rows[i] && rows[i][0]?.trim().toLowerCase() === "beras medium") {
       mediumRowIdx = i;
-      break;
+    }
+    if (rows[i] && rows[i][0]?.trim().toLowerCase() === "beras sphp") {
+      sphpRowIdx = i;
+    }
+    if (rows[i] && rows[i][0]?.trim().toLowerCase() === "minyakita") {
+      minyakitaRowIdx = i;
+    }
+    if (rows[i] && rows[i][0]?.trim().toLowerCase().startsWith("per tanggal") && ihsg.date === "") {
+      ihsg.date = rows[i][1]?.trim() || "";
     }
   }
 
   if (mediumRowIdx >= 0) {
     const mediumRow = rows[mediumRowIdx] || [];
     const premiumRow = rows[mediumRowIdx + 1] || [];
-    const dateRow = rows[mediumRowIdx + 2] || [];
+    const sphpRow = sphpRowIdx >= 0 ? rows[sphpRowIdx] : [];
+    const minyakitaRow = minyakitaRowIdx >= 0 ? rows[minyakitaRowIdx] : [];
 
     // Use static city names that match the Aceh region IHSG reporting
     const ihsgCities = [
@@ -187,21 +216,23 @@ export async function fetchSheetData(): Promise<DashboardData> {
     for (let i = 0; i < ihsgCities.length; i++) {
       const medVal = parseNumber(mediumRow[i + 1] || "0");
       const premVal = parseNumber(premiumRow[i + 1] || "0");
-      if (medVal > 0 || premVal > 0) {
+      const sphpVal = parseNumber(sphpRow[i + 1] || "0");
+      const minyakitaVal = parseNumber(minyakitaRow[i + 1] || "0");
+      if (medVal > 0 || premVal > 0 || sphpVal > 0 || minyakitaVal > 0) {
         ihsg.entries.push({
           city: ihsgCities[i],
           medium: medVal,
           premium: premVal,
+          sphp: sphpVal,
+          minyakita: minyakitaVal,
         });
       }
     }
 
     ihsg.hetMedium = parseNumber(mediumRow[6] || "0");
     ihsg.hetPremium = parseNumber(premiumRow[6] || "0");
-
-    if (dateRow[0]?.trim().toLowerCase().startsWith("per tanggal")) {
-      ihsg.date = dateRow[1]?.trim() || "";
-    }
+    ihsg.hetSphp = parseNumber(sphpRow[6] || "0");
+    ihsg.hetMinyakita = parseNumber(minyakitaRow[6] || "0");
   }
 
   return {
@@ -215,6 +246,7 @@ export async function fetchSheetData(): Promise<DashboardData> {
     pengadaan,
     sphp,
     banpang,
+    distMinyakita,
     ihsg,
   };
 }

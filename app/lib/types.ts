@@ -28,6 +28,8 @@ export interface IHSGEntry {
   city: string;
   medium: number;
   premium: number;
+  sphp: number;
+  minyakita: number;
 }
 
 export interface IHSGData {
@@ -35,6 +37,8 @@ export interface IHSGData {
   date: string;
   hetMedium: number;
   hetPremium: number;
+  hetSphp: number;
+  hetMinyakita: number;
 }
 
 export interface DashboardData {
@@ -48,5 +52,6 @@ export interface DashboardData {
   pengadaan: ProcurementItem[];
   sphp: DistributionItem[];
   banpang: DistributionItem[];
+  distMinyakita: DistributionItem[];
   ihsg: IHSGData;
 }
