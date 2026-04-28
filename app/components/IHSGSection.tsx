@@ -42,12 +42,6 @@ export default function IHSGSection({ ihsg }: IHSGSectionProps) {
                   Premium
                 </span>
               </th>
-              <th style={{ padding: "10px 14px", textAlign: "right", fontWeight: 700, color: "#0c4a6e", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.04em", borderBottom: "2px solid #eab308" }}>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#eab308" }} />
-                  SPHP
-                </span>
-              </th>
             </tr>
           </thead>
           <tbody>
@@ -72,14 +66,11 @@ export default function IHSGSection({ ihsg }: IHSGSectionProps) {
                   <td style={{ padding: "10px 14px", textAlign: "right", fontWeight: 700, color: isPremiumHigh ? "#ef4444" : "#0f172a", fontVariantNumeric: "tabular-nums" }}>
                     Rp{entry.premium.toLocaleString("id-ID")}
                   </td>
-                  <td style={{ padding: "10px 14px", textAlign: "right", fontWeight: 700, color: entry.sphp > ihsg.hetSphp ? "#ef4444" : "#0f172a", fontVariantNumeric: "tabular-nums" }}>
-                    Rp{entry.sphp.toLocaleString("id-ID")}
-                  </td>
                 </tr>
               );
             })}
             {/* HET Bapanas Row */}
-            {(ihsg.hetMedium > 0 || ihsg.hetPremium > 0 || ihsg.hetSphp > 0) && (
+            {(ihsg.hetMedium > 0 || ihsg.hetPremium > 0) && (
               <tr style={{ background: "#fef2f2", borderTop: "2px solid #fecaca" }}>
                 <td style={{ padding: "12px 14px", fontWeight: 800, color: "#991b1b", textTransform: "uppercase", fontSize: "11px", letterSpacing: "0.05em" }}>
                   HET Bapanas
@@ -89,9 +80,6 @@ export default function IHSGSection({ ihsg }: IHSGSectionProps) {
                 </td>
                 <td style={{ padding: "12px 14px", textAlign: "right", fontWeight: 800, color: "#991b1b", fontVariantNumeric: "tabular-nums" }}>
                   {ihsg.hetPremium > 0 ? `Rp${ihsg.hetPremium.toLocaleString("id-ID")}` : "-"}
-                </td>
-                <td style={{ padding: "12px 14px", textAlign: "right", fontWeight: 800, color: "#991b1b", fontVariantNumeric: "tabular-nums" }}>
-                  {ihsg.hetSphp > 0 ? `Rp${ihsg.hetSphp.toLocaleString("id-ID")}` : "-"}
                 </td>
               </tr>
             )}
