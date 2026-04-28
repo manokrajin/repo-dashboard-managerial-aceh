@@ -28,7 +28,7 @@ export default function IHSGSection({ ihsg }: IHSGSectionProps) {
           <thead>
             <tr style={{ background: "linear-gradient(135deg, #f0f9ff, #e0f2fe)" }}>
               <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 700, color: "#0c4a6e", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.04em", borderBottom: "2px solid #0ea5e9" }}>
-                Kota
+                Kab/Kota
               </th>
               <th style={{ padding: "10px 14px", textAlign: "right", fontWeight: 700, color: "#0c4a6e", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.04em", borderBottom: "2px solid #22c55e" }}>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
@@ -98,7 +98,7 @@ export default function IHSGSection({ ihsg }: IHSGSectionProps) {
           <thead>
             <tr style={{ background: "linear-gradient(135deg, #fffbeb, #fef3c7)" }}>
               <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 700, color: "#92400e", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.04em", borderBottom: "2px solid #f59e0b" }}>
-                Kota
+                Kab/Kota
               </th>
               <th style={{ padding: "10px 14px", textAlign: "right", fontWeight: 700, color: "#92400e", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.04em", borderBottom: "2px solid #f59e0b" }}>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
