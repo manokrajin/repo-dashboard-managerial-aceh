@@ -2,10 +2,14 @@ import Papa from "papaparse";
 import type { DashboardData, PriceEntry, StockItem, IHSGData, IHSGEntry } from "./types";
 
 const SPREADSHEET_ID = "1_D6vhKTplYp8uACht3qJm2aVeDtNhvL6kEDylWOCVEo";
-const SHEET_NAME = "data_web";
 
-function getCsvUrl(): string {
-  return `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${SHEET_NAME}`;
+// Sheet GIDs (found in the spreadsheet URL when each tab is selected)
+const GID_WEB = "1327062648";
+const GID_STOK = "630102233";
+
+/** Use the raw export URL which preserves all rows exactly as-is (no header merging) */
+function getCsvUrl(gid: string): string {
+  return `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${gid}`;
 }
 
 function parseNumber(val: string): number {
@@ -29,36 +33,19 @@ function formatValue(val: number): string {
   });
 }
 
-const STOCK_CONFIG: Array<{
-  name: string;
-  colIndex: number;
-  unit: string;
-  icon: string;
-}> = [
-  { name: "Beras PSO", colIndex: 1, unit: "Ton", icon: "🌾" },
-  { name: "Beras Komersial", colIndex: 2, unit: "Ton", icon: "🍚" },
-  { name: "Setara Beras", colIndex: 3, unit: "Ton", icon: "⚖️" },
-  { name: "Jagung Pakan Ternak", colIndex: 4, unit: "Ton", icon: "🌽" },
-  { name: "Gula Pasir", colIndex: 5, unit: "Ton", icon: "🧂" },
-  { name: "Minyak Goreng", colIndex: 6, unit: "Ltr", icon: "🫗" },
-  { name: "Beras SPHP @5Kg", colIndex: 7, unit: "Ton", icon: "📦" },
-  { name: "Beras BANPANG @10Kg", colIndex: 8, unit: "Ton", icon: "📦" },
-  { name: "Kemasan SPHP", colIndex: 9, unit: "Lbr", icon: "🏷️" },
-  { name: "Kemasan BANPANG", colIndex: 10, unit: "Lbr", icon: "🏷️" },
-  {
-    name: "Space Gudang Tersedia (real)",
-    colIndex: -1,
-    unit: "Ton",
-    icon: "🏭",
-  },
-];
+/** Detect whether a cell value looks like an image URL */
+function isImageUrl(val: string): boolean {
+  if (!val) return false;
+  const trimmed = val.trim();
+  return trimmed.startsWith("http://") || trimmed.startsWith("https://");
+}
 
-export async function fetchSheetData(): Promise<DashboardData> {
-  const url = getCsvUrl();
+/** Fetch and parse stock data dynamically from the data_stok sheet */
+async function fetchStockData(): Promise<{ stock: StockItem[]; stockDate: string }> {
+  const url = getCsvUrl(GID_STOK);
   const response = await fetch(url, { cache: "no-store" });
-
   if (!response.ok) {
-    throw new Error(`Failed to fetch spreadsheet: ${response.statusText}`);
+    throw new Error(`Failed to fetch stock sheet: ${response.statusText}`);
   }
 
   const csvText = await response.text();
@@ -68,15 +55,92 @@ export async function fetchSheetData(): Promise<DashboardData> {
   });
 
   const rows = parsed.data;
-  if (rows.length < 11) {
-    throw new Error("Spreadsheet is missing required rows");
+  if (rows.length < 2) {
+    throw new Error("Stock sheet is missing required rows");
   }
 
-  // Parse price history (rows 1 to 7)
+  // Row 0: Header row — column names (skip col 0 which is "Tanggal")
+  const headerRow = rows[0] || [];
+
+  // Detect whether icon/unit rows exist:
+  // If row 1 col 0 looks like a date (contains "/"), it's a data row → no icon/unit rows.
+  // Otherwise, row 1 = icons, row 2 = units, row 3+ = data.
+  const row1Col0 = (rows[1]?.[0] || "").trim();
+  const hasMetaRows = !row1Col0.includes("/") && !/^\d{2}[/-]\d{2}[/-]\d{4}$/.test(row1Col0);
+
+  let iconRow: string[] = [];
+  let unitRow: string[] = [];
+  let dataStartIdx: number;
+
+  if (hasMetaRows && rows.length >= 4) {
+    // Row 1: Icon/Image URL row
+    iconRow = rows[1] || [];
+    // Row 2: Unit row
+    unitRow = rows[2] || [];
+    // Row 3+: Data rows
+    dataStartIdx = 3;
+  } else {
+    // No icon/unit rows — all rows after header are data
+    dataStartIdx = 1;
+  }
+
+  // Use the latest (last) data row
+  const latestDataRow = rows[rows.length - 1] || [];
+  const stockDate = latestDataRow[0]?.trim() || new Date().toLocaleDateString("id-ID");
+
+  const stock: StockItem[] = [];
+  for (let col = 1; col < headerRow.length; col++) {
+    const name = headerRow[col]?.trim();
+    if (!name) continue; // Skip empty header columns
+
+    const rawIcon = iconRow[col]?.trim() || "📦";
+    const unit = unitRow[col]?.trim() || "";
+    const rawVal = latestDataRow[col] || "0";
+
+    stock.push({
+      name,
+      value: formatValue(parseNumber(rawVal)),
+      unit,
+      icon: isImageUrl(rawIcon) ? "📦" : rawIcon, // Use emoji directly, or fallback
+      imageUrl: isImageUrl(rawIcon) ? rawIcon : undefined,
+    });
+  }
+
+  return { stock, stockDate };
+}
+
+export async function fetchSheetData(): Promise<DashboardData> {
+  // Fetch stock data from dedicated data_stok sheet
+  const { stock, stockDate } = await fetchStockData();
+
+  // Fetch main dashboard data from data_web sheet
+  const url = getCsvUrl(GID_WEB);
+  const response = await fetch(url, { cache: "no-store" });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch spreadsheet: ${response.statusText}`);
+  }
+
+  const csvText = await response.text();
+  const parsed = Papa.parse<string[]>(csvText, {
+    header: false,
+    skipEmptyLines: "greedy",
+  });
+
+  const rows = parsed.data;
+
+  // Parse price history — collect rows that start with a date pattern (dd/mm/yyyy) before "data stok"
   const priceHistory: PriceEntry[] = [];
-  for (let i = 1; i <= 7; i++) {
+  let dataStokIdx = -1;
+  for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    if (row && row[0] && row[1]) {
+    if (!row) continue;
+    const col0 = (row[0] || "").trim().toLowerCase();
+    if (col0 === "data stok") {
+      dataStokIdx = i;
+      break;
+    }
+    if (row[0] && row[1] && row[0].includes("/")) {
       priceHistory.push({
         date: row[0].trim(),
         medium: parseNumber(row[1]),
@@ -86,38 +150,55 @@ export async function fetchSheetData(): Promise<DashboardData> {
     }
   }
 
-  // Parse stock data (row index 10)
-  const stockRow = rows[10] || [];
-  const stockDate = stockRow[0]?.trim() || new Date().toLocaleDateString("id-ID");
-
-  const stock: StockItem[] = STOCK_CONFIG.map((config) => {
-    if (config.colIndex === -1) {
-      return {
-        name: config.name,
-        value: "-",
-        unit: config.unit,
-        icon: config.icon,
-      };
-    }
-    const rawVal = stockRow[config.colIndex] || "0";
-    return {
-      name: config.name,
-      value: formatValue(parseNumber(rawVal)),
-      unit: config.unit,
-      icon: config.icon,
-    };
-  });
+  // Stock data is already fetched from data_stok sheet above
 
   const lastPrice = priceHistory.length > 0 ? priceHistory[priceHistory.length - 1] : null;
   const latestMedium = lastPrice ? lastPrice.medium : 0;
   const latestPremium = lastPrice ? lastPrice.premium : 0;
   const latestMinyakGoreng = lastPrice ? lastPrice.minyakGoreng : 0;
 
-  // Parse Pengadaan (target: row 12, realisasi: row 13)
-  // Read names from header row (row 0) for cols 1-3, and label row (row 11) for col 4
-  const pengadaanLabelRow = rows[11] || [];
-  const pengadaanTargetRow = rows[12] || [];
-  const pengadaanRealRow = rows[13] || [];
+  // Find key marker rows dynamically
+  let pengadaanLabelIdx = -1;
+  let targetIdx = -1;
+  let realisasiIdx = -1;
+  let distHeaderIdx = -1;
+  let distStartIdx = -1;
+
+  const searchStart = dataStokIdx > 0 ? dataStokIdx : 8;
+  for (let i = searchStart; i < rows.length; i++) {
+    const col0 = (rows[i]?.[0] || "").trim().toLowerCase();
+    
+    // Pengadaan labels row: has names like "Beras Medium" in cols 1+, col 0 is empty
+    // It comes right before "target" and "realisasi" rows
+    if (col0 === "target" && targetIdx < 0) {
+      targetIdx = i;
+      // The row before "target" is the pengadaan label row
+      if (i > 0) pengadaanLabelIdx = i - 1;
+    }
+    if (col0 === "realisasi" && realisasiIdx < 0) {
+      realisasiIdx = i;
+    }
+    
+    // Distribution header row has "target" in col 1 and "realisasi" in col 2
+    if (realisasiIdx > 0 && i > realisasiIdx) {
+      const col1 = (rows[i]?.[1] || "").trim().toLowerCase();
+      const col2 = (rows[i]?.[2] || "").trim().toLowerCase();
+      if (col1 === "target" && col2 === "realisasi" && distHeaderIdx < 0) {
+        distHeaderIdx = i;
+        distStartIdx = i + 1;
+      }
+    }
+
+    // If we find a Kanwil/Kancab row and haven't found a distHeader, use this as start
+    if (distStartIdx < 0 && (col0.startsWith("kanwil") || col0.startsWith("kancab"))) {
+      distStartIdx = i;
+    }
+  }
+
+  // Parse Pengadaan
+  const pengadaanLabelRow = pengadaanLabelIdx >= 0 ? rows[pengadaanLabelIdx] : [];
+  const pengadaanTargetRow = targetIdx >= 0 ? rows[targetIdx] : [];
+  const pengadaanRealRow = realisasiIdx >= 0 ? rows[realisasiIdx] : [];
   const pengadaan = [
     { name: pengadaanLabelRow[1]?.trim() || "Beras Medium", target: parseNumber(pengadaanTargetRow[1]), realization: parseNumber(pengadaanRealRow[1]) },
     { name: pengadaanLabelRow[2]?.trim() || "GKP", target: parseNumber(pengadaanTargetRow[2]), realization: parseNumber(pengadaanRealRow[2]) },
@@ -125,57 +206,62 @@ export async function fetchSheetData(): Promise<DashboardData> {
     { name: pengadaanLabelRow[4]?.trim() || "Jagung", target: parseNumber(pengadaanTargetRow[4]), realization: parseNumber(pengadaanRealRow[4]) },
   ];
 
-  // Parse SPHP (col A=region, B=target, C=realization)
-  // Only include rows where col A looks like a distribution region (Kanwil/Kancab)
-  // Deduplicate by region name (last occurrence wins)
+  // Parse SPHP distribution (col A=region, B=target, C=realization)
   const sphpMap = new Map<string, { region: string; target: number; realization: number }>();
-  for (let i = 14; i < rows.length; i++) {
-    const row = rows[i];
-    if (!row || !row[0]) break;
-    const label = row[0].trim().toLowerCase();
-    // Stop when we hit non-distribution rows
-    if (label === "" || label.startsWith("beras") || label.startsWith("per tanggal")) break;
-    sphpMap.set(label, {
-      region: row[0].trim(),
-      target: parseNumber(row[1]),
-      realization: parseNumber(row[2]),
-    });
+  if (distStartIdx > 0) {
+    for (let i = distStartIdx; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row) break;
+      const col0 = (row[0] || "").trim();
+      const label = col0.toLowerCase();
+      if (label === "" || label.startsWith("beras") || label.startsWith("per tanggal")) break;
+      if (label.startsWith("kanwil") || label.startsWith("kancab")) {
+        sphpMap.set(label, {
+          region: col0,
+          target: parseNumber(row[1]),
+          realization: parseNumber(row[2]),
+        });
+      }
+    }
   }
   const sphp = Array.from(sphpMap.values());
 
-  // Parse Banpang (col E=region, F=target, G=realization — 0-indexed: col4, col5, col6)
-  // Deduplicate by region name (last occurrence wins)
+  // Parse Banpang distribution (col E=region, F=target, G=realization — 0-indexed: col4, col5, col6)
   const banpangMap = new Map<string, { region: string; target: number; realization: number }>();
-  for (let i = 14; i < rows.length; i++) {
-    const row = rows[i];
-    if (!row) break;
-    const label = (row[4] || "").trim().toLowerCase();
-    // Stop when we hit non-distribution rows
-    if (label === "" || label.startsWith("beras") || label.startsWith("per tanggal") || label.startsWith("aceh")) break;
-    if (row[4] && row[4].trim() !== "") {
-      banpangMap.set(label, {
-        region: row[4].trim(),
-        target: parseNumber(row[5]),
-        realization: parseNumber(row[6]),
-      });
+  if (distStartIdx > 0) {
+    for (let i = distStartIdx; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row) break;
+      const col4 = (row[4] || "").trim();
+      const label = col4.toLowerCase();
+      if (label === "" || label.startsWith("beras") || label.startsWith("per tanggal") || label.startsWith("aceh")) break;
+      if (label.startsWith("kanwil") || label.startsWith("kancab")) {
+        banpangMap.set(label, {
+          region: col4,
+          target: parseNumber(row[5]),
+          realization: parseNumber(row[6]),
+        });
+      }
     }
   }
   const banpang = Array.from(banpangMap.values());
 
   // Parse Minyakita Distribution (col I=region, J=target, K=realization — 0-indexed: col8, col9, col10)
   const minyakitaDistMap = new Map<string, { region: string; target: number; realization: number }>();
-  for (let i = 14; i < rows.length; i++) {
-    const row = rows[i];
-    if (!row) break;
-    const label = (row[8] || "").trim().toLowerCase();
-    // Stop when we hit non-distribution rows
-    if (label === "" || label.startsWith("beras") || label.startsWith("per tanggal") || label.startsWith("aceh")) break;
-    if (row[8] && row[8].trim() !== "") {
-      minyakitaDistMap.set(label, {
-        region: row[8].trim(),
-        target: parseNumber(row[9]),
-        realization: parseNumber(row[10]),
-      });
+  if (distStartIdx > 0) {
+    for (let i = distStartIdx; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row) break;
+      const col8 = (row[8] || "").trim();
+      const label = col8.toLowerCase();
+      if (label === "" || label.startsWith("beras") || label.startsWith("per tanggal") || label.startsWith("aceh")) break;
+      if (label.startsWith("kanwil") || label.startsWith("kancab")) {
+        minyakitaDistMap.set(label, {
+          region: col8,
+          target: parseNumber(row[9]),
+          realization: parseNumber(row[10]),
+        });
+      }
     }
   }
   const distMinyakita = Array.from(minyakitaDistMap.values());
@@ -186,17 +272,12 @@ export async function fetchSheetData(): Promise<DashboardData> {
   let mediumRowIdx = -1;
   let sphpRowIdx = -1;
   let minyakitaRowIdx = -1;
-  for (let i = 14; i < rows.length; i++) {
-    if (rows[i] && rows[i][0]?.trim().toLowerCase() === "beras medium") {
-      mediumRowIdx = i;
-    }
-    if (rows[i] && rows[i][0]?.trim().toLowerCase() === "beras sphp") {
-      sphpRowIdx = i;
-    }
-    if (rows[i] && rows[i][0]?.trim().toLowerCase() === "minyakita") {
-      minyakitaRowIdx = i;
-    }
-    if (rows[i] && rows[i][0]?.trim().toLowerCase().startsWith("per tanggal") && ihsg.date === "") {
+  for (let i = 0; i < rows.length; i++) {
+    const col0 = (rows[i]?.[0] || "").trim().toLowerCase();
+    if (col0 === "beras medium") mediumRowIdx = i;
+    if (col0 === "beras sphp") sphpRowIdx = i;
+    if (col0 === "minyakita") minyakitaRowIdx = i;
+    if (col0.startsWith("per tanggal") && ihsg.date === "") {
       ihsg.date = rows[i][1]?.trim() || "";
     }
   }

@@ -3,6 +3,7 @@ export interface StockItem {
   value: string;
   unit: string;
   icon: string;
+  imageUrl?: string;
 }
 
 export interface PriceEntry {

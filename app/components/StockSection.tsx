@@ -1,10 +1,34 @@
 "use client";
 
+import { useState } from "react";
 import type { StockItem } from "@/app/lib/types";
 
 interface StockSectionProps {
   stock: StockItem[];
   stockDate: string;
+}
+
+/** Renders the icon for a stock item — either an <img> or emoji fallback */
+function StockIcon({ item }: { item: StockItem }) {
+  const [imgError, setImgError] = useState(false);
+
+  if (item.imageUrl && !imgError) {
+    return (
+      <img
+        src={item.imageUrl}
+        alt={item.name}
+        onError={() => setImgError(true)}
+        style={{
+          width: "24px",
+          height: "24px",
+          objectFit: "contain",
+          borderRadius: "4px",
+        }}
+      />
+    );
+  }
+
+  return <span style={{ fontSize: "18px", lineHeight: 1 }}>{item.icon}</span>;
 }
 
 export default function StockSection({ stock, stockDate }: StockSectionProps) {
@@ -16,7 +40,7 @@ export default function StockSection({ stock, stockDate }: StockSectionProps) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "12px" }}>
         {stock.map((item, index) => (
           <div 
-            key={index} 
+            key={`${item.name}-${index}`} 
             style={{ 
               display: "flex", 
               alignItems: "center", 
@@ -26,11 +50,24 @@ export default function StockSection({ stock, stockDate }: StockSectionProps) {
               fontSize: "14px"
             }}
           >
-            <div style={{ marginRight: "12px", fontSize: "18px" }}>{item.icon}</div>
+            <div style={{
+              marginRight: "12px",
+              width: "32px",
+              height: "32px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "white",
+              borderRadius: "6px",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+              flexShrink: 0,
+            }}>
+              <StockIcon item={item} />
+            </div>
             <div style={{ flex: 1, fontWeight: 600, color: "#334155" }}>{item.name}</div>
             <div style={{ fontWeight: 700, color: "#0f172a" }}>
               <span style={{ marginRight: "4px" }}>:</span>
-              {item.value} <span style={{ fontSize: "12px", color: "#64748b", fontWeight: 500 }}>{item.unit}</span>
+              {item.value} {item.unit && <span style={{ fontSize: "12px", color: "#64748b", fontWeight: 500 }}>{item.unit}</span>}
             </div>
           </div>
         ))}

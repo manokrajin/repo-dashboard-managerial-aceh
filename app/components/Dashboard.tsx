@@ -165,6 +165,9 @@ export default function Dashboard({ initialData }: DashboardProps) {
                   latestMedium={data.latestMedium}
                   latestPremium={data.latestPremium}
                   latestMinyakGoreng={data.latestMinyakGoreng}
+                  hetMedium={data.ihsg.hetMedium}
+                  hetPremium={data.ihsg.hetPremium}
+                  hetMinyakita={data.ihsg.hetMinyakita}
                 />
 
                 <div style={{ padding: "20px", background: "white", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
@@ -189,7 +192,7 @@ export default function Dashboard({ initialData }: DashboardProps) {
             <div className="distribution-row">
               <DistributionSection title="SPHP" data={data.sphp} colorTheme="amber" icon="📦" />
               <DistributionSection title="BANPANG" data={data.banpang} colorTheme="purple" icon="🏷️" />
-              <DistributionSection title="MINYAKITA" data={data.distMinyakita} colorTheme="blue" icon="🫗" />
+              <DistributionSection title="MINYAKITA BANPANG" data={data.distMinyakita} colorTheme="blue" icon="🫗" />
             </div>
           </div>
 
