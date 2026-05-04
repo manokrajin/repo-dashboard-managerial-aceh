@@ -40,6 +40,28 @@ function isImageUrl(val: string): boolean {
   return trimmed.startsWith("http://") || trimmed.startsWith("https://");
 }
 
+/** Convert Google Drive URLs to direct image URLs that work as <img> src */
+function toDirectImageUrl(url: string): string {
+  const trimmed = url.trim();
+
+  // Extract file ID from various Google Drive URL formats:
+  // - https://drive.google.com/file/d/FILE_ID/view
+  // - https://drive.google.com/open?id=FILE_ID
+  // - https://drive.google.com/uc?export=view&id=FILE_ID
+  const driveFileMatch = trimmed.match(/drive\.google\.com\/file\/d\/([^/?#]+)/);
+  if (driveFileMatch) {
+    return `https://drive.google.com/uc?export=view&id=${driveFileMatch[1]}`;
+  }
+
+  const driveIdMatch = trimmed.match(/drive\.google\.com\/(?:open|uc)\?.*id=([^&#]+)/);
+  if (driveIdMatch) {
+    return `https://drive.google.com/uc?export=view&id=${driveIdMatch[1]}`;
+  }
+
+  // Not a Google Drive URL — return as-is
+  return trimmed;
+}
+
 /** Fetch and parse stock data dynamically from the data_stok sheet */
 async function fetchStockData(): Promise<{ stock: StockItem[]; stockDate: string }> {
   const url = getCsvUrl(GID_STOK);
@@ -101,8 +123,8 @@ async function fetchStockData(): Promise<{ stock: StockItem[]; stockDate: string
       name,
       value: formatValue(parseNumber(rawVal)),
       unit,
-      icon: isImageUrl(rawIcon) ? "📦" : rawIcon, // Use emoji directly, or fallback
-      imageUrl: isImageUrl(rawIcon) ? rawIcon : undefined,
+      icon: isImageUrl(rawIcon) ? "📦" : rawIcon,
+      imageUrl: isImageUrl(rawIcon) ? toDirectImageUrl(rawIcon) : undefined,
     });
   }
 
@@ -266,6 +288,36 @@ export async function fetchSheetData(): Promise<DashboardData> {
   }
   const distMinyakita = Array.from(minyakitaDistMap.values());
 
+  // Parse Pengadaan GKP Distribution
+  const pengadaanGkpMap = new Map<string, { region: string; target: number; realization: number }>();
+  let gkpStartIdx = -1;
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const col1 = (rows[i]?.[1] || "").trim().toLowerCase();
+    const col0 = (rows[i]?.[0] || "").trim().toLowerCase();
+    if (col1 === "realisasi" && col0 === "") {
+      gkpStartIdx = i + 1;
+      break;
+    }
+  }
+
+  if (gkpStartIdx > 0) {
+    for (let i = gkpStartIdx; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row) continue;
+      const col0 = (row[0] || "").trim();
+      const label = col0.toLowerCase();
+      if (label === "") continue;
+      if (label.startsWith("kanwil") || label.startsWith("kancab")) {
+        pengadaanGkpMap.set(label, {
+          region: col0,
+          target: 0,
+          realization: parseNumber(row[1]),
+        });
+      }
+    }
+  }
+  const pengadaanGkp = Array.from(pengadaanGkpMap.values());
+
   // Parse IHSG data — dynamically find "beras medium" row
   const ihsg: IHSGData = { entries: [], date: "", hetMedium: 0, hetPremium: 0, hetSphp: 0, hetMinyakita: 0 };
   
@@ -328,6 +380,7 @@ export async function fetchSheetData(): Promise<DashboardData> {
     sphp,
     banpang,
     distMinyakita,
+    pengadaanGkp,
     ihsg,
   };
 }

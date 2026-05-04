@@ -18,6 +18,7 @@ function StockIcon({ item }: { item: StockItem }) {
         src={item.imageUrl}
         alt={item.name}
         onError={() => setImgError(true)}
+        referrerPolicy="no-referrer"
         style={{
           width: "24px",
           height: "24px",

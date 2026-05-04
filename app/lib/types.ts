@@ -54,5 +54,6 @@ export interface DashboardData {
   sphp: DistributionItem[];
   banpang: DistributionItem[];
   distMinyakita: DistributionItem[];
+  pengadaanGkp: DistributionItem[];
   ihsg: IHSGData;
 }
