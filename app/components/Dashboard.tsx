@@ -180,7 +180,7 @@ export default function Dashboard({ initialData }: DashboardProps) {
 
                 <ProcurementSection pengadaan={data.pengadaan} />
                 
-                <RealisasiSection title="PENGADAAN GKP" data={data.pengadaanGkp} colorTheme="emerald" icon="🌾" />
+                <RealisasiSection title="PENGELOLAAN GKP" data={data.pengadaanGkp} colorTheme="emerald" icon="🌾" />
               </div>
 
               {/* Right Column */}
