@@ -288,14 +288,21 @@ export async function fetchSheetData(): Promise<DashboardData> {
   }
   const distMinyakita = Array.from(minyakitaDistMap.values());
 
-  // Parse Pengadaan GKP Distribution
+  // Parse Pengadaan GKP & Olah Distribution
   const pengadaanGkpMap = new Map<string, { region: string; target: number; realization: number }>();
+  const pengadaanOlahMap = new Map<string, { region: string; target: number; realization: number }>();
   let gkpStartIdx = -1;
+  let hasOlah = false;
+  
   for (let i = rows.length - 1; i >= 0; i--) {
     const col1 = (rows[i]?.[1] || "").trim().toLowerCase();
     const col0 = (rows[i]?.[0] || "").trim().toLowerCase();
-    if (col1 === "realisasi" && col0 === "") {
+    if (col1.includes("realisasi") && col0 === "") {
       gkpStartIdx = i + 1;
+      const col2 = (rows[i]?.[2] || "").trim().toLowerCase();
+      if (col2.includes("olah")) {
+        hasOlah = true;
+      }
       break;
     }
   }
@@ -313,10 +320,18 @@ export async function fetchSheetData(): Promise<DashboardData> {
           target: 0,
           realization: parseNumber(row[1]),
         });
+        if (hasOlah) {
+          pengadaanOlahMap.set(label, {
+            region: col0,
+            target: 0,
+            realization: parseNumber(row[2]),
+          });
+        }
       }
     }
   }
   const pengadaanGkp = Array.from(pengadaanGkpMap.values());
+  const pengadaanOlah = Array.from(pengadaanOlahMap.values());
 
   // Parse IHSG data — dynamically find "beras medium" row
   const ihsg: IHSGData = { entries: [], date: "", hetMedium: 0, hetPremium: 0, hetSphp: 0, hetMinyakita: 0 };
@@ -381,6 +396,7 @@ export async function fetchSheetData(): Promise<DashboardData> {
     banpang,
     distMinyakita,
     pengadaanGkp,
+    pengadaanOlah,
     ihsg,
   };
 }

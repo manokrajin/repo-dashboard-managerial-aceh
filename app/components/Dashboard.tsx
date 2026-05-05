@@ -10,7 +10,7 @@ import StockSection from "./StockSection";
 import PriceSection from "./PriceSection";
 import ExportButtons from "./ExportButtons";
 import ProcurementSection from "./ProcurementSection";
-import RealisasiSection from "./RealisasiSection";
+import PengelolaanSection from "./PengelolaanSection";
 import DistributionSection from "./DistributionSection";
 import IHSGSection from "./IHSGSection";
 
@@ -180,7 +180,11 @@ export default function Dashboard({ initialData }: DashboardProps) {
 
                 <ProcurementSection pengadaan={data.pengadaan} />
                 
-                <RealisasiSection title="PENGADAAN GKP" data={data.pengadaanGkp} colorTheme="emerald" icon="🌾" />
+                <PengelolaanSection 
+                  title="PENGELOLAAN GKP" 
+                  dataGkp={data.pengadaanGkp} 
+                  dataOlah={data.pengadaanOlah || []} 
+                />
               </div>
 
               {/* Right Column */}
