@@ -181,7 +181,7 @@ export default function Dashboard({ initialData }: DashboardProps) {
                 <ProcurementSection pengadaan={data.pengadaan} />
                 
                 <PengelolaanSection 
-                  title="PENGELOLAAN GKP" 
+                  title="PENGOLAHAN GKP" 
                   dataGkp={data.pengadaanGkp} 
                   dataOlah={data.pengadaanOlah || []} 
                 />
